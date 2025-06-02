@@ -6,11 +6,11 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 app = Flask(__name__)
 
-# 環境変数からトークンを読み込み（Render に設定）
+# 環境変数からLINEのAPIキーを取得
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
-# 質問と点数
+# 診断質問と点数
 questions = [
     ("牛乳、乳製品をあまりとらない", 2),
     ("小魚、豆腐をあまりとらない", 2),
@@ -27,14 +27,16 @@ questions = [
     ("女性：閉経済／男性：70歳以上", 4)
 ]
 
-# ユーザー状態管理
-user_states = {}   # ユーザーの現在の質問番号
-user_scores = {}   # ユーザーの合計スコア
+# ユーザーごとの診断状態を保持
+user_states = {}
+user_scores = {}
 
+# 確認用のルート
 @app.route("/")
 def index():
-    return "骨粗鬆症セルフチェックBot稼働中"
+    return "骨粗鬆症セルフチェックBot 起動中"
 
+# LINE Webhookエンドポイント
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers["X-Line-Signature"]
@@ -44,15 +46,16 @@ def callback():
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
+
     return "OK"
 
+# ユーザーからのテキストメッセージ処理
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
     msg = event.message.text.strip().lower()
 
     if user_id not in user_states:
-        # 診断スタート条件
         if msg == "セルフチェック開始":
             user_states[user_id] = 0
             user_scores[user_id] = 0
@@ -62,21 +65,17 @@ def handle_message(event):
                 TextSendMessage(text="骨粗鬆症セルフチェックを始めます。\n\n「はい」か「いいえ」で答えてください。\n\nQ1: " + first_q)
             )
         else:
-            # 開始メッセージ以外には案内
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="診断を始めるには「セルフチェック開始」と送信してください。")
             )
     else:
         idx = user_states[user_id]
-
-        # 回答処理（はいのみ点数加算）
         if msg == "はい":
             user_scores[user_id] += questions[idx][1]
 
         idx += 1
         if idx >= len(questions):
-            # 診断完了
             score = user_scores[user_id]
             if score <= 2:
                 result = "今は心配ないと考えられます。生活習慣を維持しましょう。"
@@ -87,7 +86,6 @@ def handle_message(event):
             else:
                 result = "骨が弱くなっていると考えられます。一度医師の診察を受けてください。"
 
-            # 状態クリア
             del user_states[user_id]
             del user_scores[user_id]
 
@@ -96,10 +94,14 @@ def handle_message(event):
                 TextSendMessage(text=f"✅ 診断結果：{score}点\n{result}")
             )
         else:
-            # 次の質問
             user_states[user_id] = idx
             next_q = questions[idx][0]
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text=f"Q{idx + 1}: {next_q}")
             )
+
+# Renderのためのポートバインド（これが重要！）
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=por
