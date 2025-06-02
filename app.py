@@ -6,11 +6,9 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 app = Flask(__name__)
 
-# 環境変数からLINEのAPIキーを取得
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
-# 診断質問と点数
 questions = [
     ("牛乳、乳製品をあまりとらない", 2),
     ("小魚、豆腐をあまりとらない", 2),
@@ -27,7 +25,6 @@ questions = [
     ("女性：閉経済／男性：70歳以上", 4)
 ]
 
-# ユーザーごとの診断状態を保持
 user_states = {}
 user_scores = {}
 
@@ -59,8 +56,9 @@ def handle_message(event):
             first_q = questions[0][0]
             intro_message = (
                 "骨粗鬆症セルフチェックを始めます。\n\n"
-                "Q1: " + first_q + "\n\n"
-                "※診断中に「はい」「いいえ」以外のメッセージを送ると診断が中断されます。"
+                "質問には「はい」または「いいえ」でお答えください。\n\n"
+                "※診断中に「はい」「いいえ」以外のメッセージを送ると、中断となります。ご注意ください。\n\n"
+                f"Q1: {first_q}"
             )
             line_bot_api.reply_message(
                 event.reply_token,
@@ -71,7 +69,6 @@ def handle_message(event):
     else:
         idx = user_states[user_id]
 
-        # 「はい」「いいえ」以外の入力は診断中断とみなす
         if msg not in ["はい", "いいえ"]:
             del user_states[user_id]
             del user_scores[user_id]
@@ -81,7 +78,6 @@ def handle_message(event):
             )
             return
 
-        # 「はい」の場合のみ加点
         if msg == "はい":
             user_scores[user_id] += questions[idx][1]
 
@@ -112,7 +108,6 @@ def handle_message(event):
                 TextSendMessage(text=f"Q{idx + 1}: {next_q}")
             )
 
-# Renderでのポートバインド
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
