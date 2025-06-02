@@ -31,12 +31,10 @@ questions = [
 user_states = {}
 user_scores = {}
 
-# 確認用のルート
 @app.route("/")
 def index():
     return "骨粗鬆症セルフチェックBot 起動中"
 
-# LINE Webhookエンドポイント
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers["X-Line-Signature"]
@@ -49,7 +47,6 @@ def callback():
 
     return "OK"
 
-# ユーザーからのテキストメッセージ処理
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
@@ -60,14 +57,31 @@ def handle_message(event):
             user_states[user_id] = 0
             user_scores[user_id] = 0
             first_q = questions[0][0]
+            intro_message = (
+                "骨粗鬆症セルフチェックを始めます。\n\n"
+                "Q1: " + first_q + "\n\n"
+                "※診断中に「はい」「いいえ」以外のメッセージを送ると診断が中断されます。"
+            )
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="骨粗鬆症セルフチェックを始めます。\n\n「はい」か「いいえ」で答えてください。\n\nQ1: " + first_q)
+                TextSendMessage(text=intro_message)
             )
-        return  # 「セルフチェック開始」以外は無反応にする
+        return
 
     else:
         idx = user_states[user_id]
+
+        # 「はい」「いいえ」以外の入力は診断中断とみなす
+        if msg not in ["はい", "いいえ"]:
+            del user_states[user_id]
+            del user_scores[user_id]
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="診断を中断しました。\nもう一度やり直すには「セルフチェック開始」と送信してください。")
+            )
+            return
+
+        # 「はい」の場合のみ加点
         if msg == "はい":
             user_scores[user_id] += questions[idx][1]
 
@@ -98,7 +112,7 @@ def handle_message(event):
                 TextSendMessage(text=f"Q{idx + 1}: {next_q}")
             )
 
-# Renderのためのポートバインド
+# Renderでのポートバインド
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
