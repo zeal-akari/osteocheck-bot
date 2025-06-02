@@ -64,11 +64,8 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text="骨粗鬆症セルフチェックを始めます。\n\n「はい」か「いいえ」で答えてください。\n\nQ1: " + first_q)
             )
-        else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="診断を始めるには「セルフチェック開始」と送信してください。")
-            )
+        return  # 「セルフチェック開始」以外は無反応にする
+
     else:
         idx = user_states[user_id]
         if msg == "はい":
@@ -101,7 +98,7 @@ def handle_message(event):
                 TextSendMessage(text=f"Q{idx + 1}: {next_q}")
             )
 
-# Renderのためのポートバインド（これが重要！）
+# Renderのためのポートバインド
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
