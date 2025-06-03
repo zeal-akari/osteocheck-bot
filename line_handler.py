@@ -30,7 +30,14 @@ def handle_message(event):
     # 骨粗鬆症セルフチェック開始
     if text == "セルフチェック開始":
         user_states[user_id] = {"mode": "selfcheck", "current_q": 1, "score": 0}
-        return send_selfcheck_question(user_id, 1)
+        intro = (
+            "🦴 骨粗鬆症セルフチェックを始めます！\n"
+            "質問には「はい」か「いいえ」でお答えください。\n"
+            "表示されたボタンをタップしてください。\n\n"
+            "※診断中に「はい」「いいえ」以外のメッセージを送ると中断されます。"
+        )
+        first_q = send_selfcheck_question(user_id, 1)
+        return [TextSendMessage(text=intro), first_q]
 
     # 進行中ユーザーの回答処理
     if user_id in user_states:
@@ -89,7 +96,7 @@ def send_nutrition_question(user_id, q_num):
     quick_reply = QuickReply(items=[
         QuickReplyButton(action=MessageAction(label=f"{k}: {v}", text=k)) for k, v in choices.items()
     ])
-    return TextSendMessage(text=f"Q{q_num}: {text}", quick_reply=quick_reply)
+    return TextSendMessage(text=f"Q{q_num}. {text}", quick_reply=quick_reply)
 
 def send_selfcheck_question(user_id, q_num):
     q_text = selfcheck_questions[q_num]["text"]
@@ -97,4 +104,4 @@ def send_selfcheck_question(user_id, q_num):
         QuickReplyButton(action=MessageAction(label="はい", text="はい")),
         QuickReplyButton(action=MessageAction(label="いいえ", text="いいえ")),
     ])
-    return TextSendMessage(text=f"Q{q_num}: {q_text}", quick_reply=quick_reply)
+    return TextSendMessage(text=f"Q{q_num}. {q_text}", quick_reply=quick_reply)
