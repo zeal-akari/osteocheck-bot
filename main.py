@@ -32,6 +32,7 @@ def on_message(event):
     if reply:
         line_bot_api.reply_message(event.reply_token, reply)
 
-# Renderで起動する用
+# 🔧 Render対応：Flaskを指定ポートで起動（デフォルト: 10000）
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
