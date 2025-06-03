@@ -9,8 +9,11 @@ def handle_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
 
-    # 栄養チェックの開始
-    if text == "栄養チェック開始":
+    # 🔍 デバッグ用ログ
+    print(f"[DEBUG] message from {user_id}: '{text}'")
+
+    # 栄養チェックの開始（柔軟にマッチ）
+    if "栄養チェック" in text:
         user_states[user_id] = {"current_q": 1, "answers": {}}
         return send_question(user_id, 1)
 
@@ -18,6 +21,7 @@ def handle_message(event):
     if user_id in user_states:
         state = user_states[user_id]
         q_num = state["current_q"]
+
         # 回答としてA/B/Cを受け取る
         if text in ["A", "B", "C"]:
             state["answers"][q_num] = text
