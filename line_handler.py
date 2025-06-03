@@ -23,7 +23,7 @@ def handle_message(event):
         first_q = send_question(user_id, 1)
         return [TextSendMessage(text=intro), first_q]
 
-    # セルフチェック開始（以前の骨粗鬆症チェック用）
+    # 骨粗鬆症セルフチェック開始
     if text == "セルフチェック開始":
         user_states[user_id] = {"mode": "selfcheck", "step": 0}
         return TextSendMessage(text="セルフチェックを始めます。\nQ1: 牛乳、乳製品をあまりとらない（はい／いいえ）")
@@ -32,6 +32,7 @@ def handle_message(event):
     if user_id in user_states:
         state = user_states[user_id]
 
+        # 栄養チェックの処理
         if state["mode"] == "nutrition":
             q_num = state["current_q"]
             if text in ["A", "B", "C"]:
@@ -45,19 +46,24 @@ def handle_message(event):
                     state["current_q"] = q_num
                     return send_question(user_id, q_num)
             else:
-                return TextSendMessage(text="A〜Cの中からボタンをタップして選んでください。")
-
-        elif state["mode"] == "selfcheck":
-            # 簡易ロジック（例）
-            step = state["step"]
-            if step == 0:
-                state["step"] += 1
-                return TextSendMessage(text="Q2: 小魚、豆腐をあまりとらない（はい／いいえ）")
-            elif step == 1:
                 del user_states[user_id]
-                return TextSendMessage(text="セルフチェックの結果：リスクが少し高めかもしれません。生活習慣に注意しましょう。")
+                return TextSendMessage(text="診断を中断しました。\nもう一度「栄養チェック開始」と送信してください。")
 
-    # その他のメッセージ
+        # 骨粗鬆症セルフチェックの処理
+        elif state["mode"] == "selfcheck":
+            step = state["step"]
+            if text in ["はい", "いいえ"]:
+                if step == 0:
+                    state["step"] += 1
+                    return TextSendMessage(text="Q2: 小魚、豆腐をあまりとらない（はい／いいえ）")
+                elif step == 1:
+                    del user_states[user_id]
+                    return TextSendMessage(text="セルフチェックの結果：リスクが少し高めかもしれません。生活習慣に注意しましょう。")
+            else:
+                del user_states[user_id]
+                return TextSendMessage(text="診断を中断しました。\nもう一度「セルフチェック開始」と送信してください。")
+
+    # その他
     return TextSendMessage(text="診断を始めるには「セルフチェック開始」または「栄養チェック開始」と送信してください。")
 
 def send_question(user_id, q_num):
