@@ -2,16 +2,16 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, QuickRepl
 from questions import questions
 from diagnosis_logic import generate_result_text
 
-# ユーザーごとの状態を一時記録（Renderでは短期記憶しか使えません）
+# ユーザー状態管理
 user_states = {}
 
 def handle_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
 
-    # 栄養チェックの開始
+    # 栄養チェック開始
     if text == "栄養チェック開始":
-        user_states[user_id] = {"current_q": 1, "answers": {}}
+        user_states[user_id] = {"mode": "nutrition", "current_q": 1, "answers": {}}
         intro = (
             "🦴 1日分の栄養と生活習慣から、骨の健康バランスをチェックします！\n"
             "このチェックは、AIによる簡易的なセルフチェックです。\n"
@@ -23,27 +23,42 @@ def handle_message(event):
         first_q = send_question(user_id, 1)
         return [TextSendMessage(text=intro), first_q]
 
-    # 診断中のユーザーか？
+    # セルフチェック開始（以前の骨粗鬆症チェック用）
+    if text == "セルフチェック開始":
+        user_states[user_id] = {"mode": "selfcheck", "step": 0}
+        return TextSendMessage(text="セルフチェックを始めます。\nQ1: 牛乳、乳製品をあまりとらない（はい／いいえ）")
+
+    # チェック進行中のユーザー
     if user_id in user_states:
         state = user_states[user_id]
-        q_num = state["current_q"]
-        # 回答としてA/B/Cを受け取る
-        if text in ["A", "B", "C"]:
-            state["answers"][q_num] = text
-            q_num += 1
-            if q_num > 10:
-                # 診断終了、結果を出力
-                result = generate_result_text(state["answers"])
-                del user_states[user_id]
-                return TextSendMessage(text=result)
-            else:
-                state["current_q"] = q_num
-                return send_question(user_id, q_num)
-        else:
-            return TextSendMessage(text="A〜Cの中からボタンをタップして選んでください。")
 
-    # 診断以外のとき
-    return TextSendMessage(text="診断を始めるには「栄養チェック開始」と送信してください。")
+        if state["mode"] == "nutrition":
+            q_num = state["current_q"]
+            if text in ["A", "B", "C"]:
+                state["answers"][q_num] = text
+                q_num += 1
+                if q_num > 10:
+                    result = generate_result_text(state["answers"])
+                    del user_states[user_id]
+                    return TextSendMessage(text=result)
+                else:
+                    state["current_q"] = q_num
+                    return send_question(user_id, q_num)
+            else:
+                return TextSendMessage(text="A〜Cの中からボタンをタップして選んでください。")
+
+        elif state["mode"] == "selfcheck":
+            # 簡易ロジック（例）
+            step = state["step"]
+            if step == 0:
+                state["step"] += 1
+                return TextSendMessage(text="Q2: 小魚、豆腐をあまりとらない（はい／いいえ）")
+            elif step == 1:
+                del user_states[user_id]
+                return TextSendMessage(text="セルフチェックの結果：リスクが少し高めかもしれません。生活習慣に注意しましょう。")
+
+    # その他のメッセージ
+    return TextSendMessage(text="診断を始めるには「セルフチェック開始」または「栄養チェック開始」と送信してください。")
 
 def send_question(user_id, q_num):
     q = questions[q_num]
