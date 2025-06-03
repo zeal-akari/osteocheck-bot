@@ -89,6 +89,7 @@ def handle_message(event):
     # 未対応メッセージ
     return TextSendMessage(text="診断を始めるには「セルフチェック開始」または「栄養チェック開始」と送信してください。")
 
+# 質問文に「Q1.〜」が含まれている前提（番号を重ねない）
 def send_nutrition_question(user_id, q_num):
     q = questions[q_num]
     text = q["text"]
@@ -96,7 +97,7 @@ def send_nutrition_question(user_id, q_num):
     quick_reply = QuickReply(items=[
         QuickReplyButton(action=MessageAction(label=f"{k}: {v}", text=k)) for k, v in choices.items()
     ])
-    return TextSendMessage(text=f"Q{q_num}. {text}", quick_reply=quick_reply)
+    return TextSendMessage(text=text, quick_reply=quick_reply)
 
 def send_selfcheck_question(user_id, q_num):
     q_text = selfcheck_questions[q_num]["text"]
