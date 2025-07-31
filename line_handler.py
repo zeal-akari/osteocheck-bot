@@ -86,8 +86,10 @@ def handle_message(event):
                 del user_states[user_id]
                 return TextSendMessage(text="診断を中断しました。\nもう一度「セルフチェック開始」と送信してください。")
 
-    # 未対応メッセージ
-    return TextSendMessage(text="診断を始めるには「セルフチェック開始」または「栄養チェック開始」と送信してください。")
+    # 診断未開始時のその他メッセージは無視（返信なし）
+    return None
+
+
 
 # 質問文に「Q1.〜」が含まれている前提（番号を重ねない）
 def send_nutrition_question(user_id, q_num):
